@@ -1,0 +1,21 @@
+[build]
+  publish = "public"
+  command = "echo 'no build step'"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Sign-in links land on /signin and are handled by the single-page app.
+[[redirects]]
+  from = "/signin"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "same-origin"
+    X-Robots-Tag = "noindex, nofollow"
+    Content-Security-Policy = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
