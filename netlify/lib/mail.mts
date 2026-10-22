@@ -24,7 +24,17 @@ export async function sendMail(opts: { to: string; subject: string; html: string
     transport = nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
   }
   const fromName = env("MAIL_FROM_NAME") || "Team Board";
-  await transport.sendMail({ from: `"${fromName}" <${user}>`, ...opts });
+  try {
+    await transport.sendMail({ from: `"${fromName}" <${user}>`, ...opts });
+  } catch (err: any) {
+    // Surface Gmail's reason (never includes the password) so setup problems are diagnosable.
+    console.error("sendMail failed:", err?.code, err?.responseCode, err?.response || err?.message);
+    transport = null;
+    if (err?.code === "EAUTH") {
+      throw new Error(`Email is not set up correctly: Gmail rejected the sign-in for ${user}. Check that the app password was created while signed in to that exact account.`);
+    }
+    throw new Error(`Email couldn't be sent (${err?.code || "error"}: ${String(err?.response || err?.message || "").split("\n")[0].slice(0, 160)})`);
+  }
 }
 
 export function siteUrl(fallback?: string): string {

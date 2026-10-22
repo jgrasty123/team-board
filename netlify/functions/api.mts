@@ -471,7 +471,7 @@ export default async (req: Request) => {
   } catch (err: any) {
     if (err instanceof HttpError) return json({ error: err.message }, err.status);
     console.error(err);
-    return json({ error: err?.message?.startsWith("Email is not set up") ? err.message : "Something went wrong" }, 500);
+    return json({ error: /^Email (is not set up|couldn't be sent)/.test(err?.message || "") ? err.message : "Something went wrong" }, 500);
   }
 };
 
