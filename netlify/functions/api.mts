@@ -2,7 +2,7 @@ import type { Config } from "@netlify/functions";
 import { q, one } from "../lib/db.mts";
 import {
   SESSION_COOKIE, type Person, consumeLoginToken, createLoginToken, createSession,
-  deleteSession, personFromSession,
+  deleteSession, hashToken, personFromSession,
 } from "../lib/auth.mts";
 import { esc, layout, sendMail, siteUrl } from "../lib/mail.mts";
 
@@ -119,6 +119,8 @@ async function requestLink(req: Request) {
       if (!recent) {
         const token = await createLoginToken(person.id, 30);
         const link = `${siteUrl(new URL(req.url).origin)}/signin?token=${encodeURIComponent(token)}`;
+        // If sending fails, drop the token so the person can retry right away.
+        const dropToken = () => q(`DELETE FROM login_tokens WHERE token_hash = $1`, [hashToken(token)]);
         await sendMail({
           to: email,
           subject: "Your sign-in link for the team board",
@@ -127,7 +129,7 @@ async function requestLink(req: Request) {
             `<p>Hi ${esc(person.name)},</p><p>Click below to sign in. The link works once and expires in 30 minutes.</p>
              <p><a href="${esc(link)}" style="display:inline-block;background:#2f5d50;color:#fff;text-decoration:none;padding:10px 18px;border-radius:7px;font-weight:600">Sign in</a></p>
              <p style="color:#7a746a">If you didn't ask for this, you can ignore this email.</p>`),
-        });
+        }).catch(async (err) => { await dropToken(); throw err; });
       }
     }
   }
